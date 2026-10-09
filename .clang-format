@@ -109,4 +109,3 @@ SpaceBeforeInheritanceColon: true
 SpaceBeforeRangeBasedForLoopColon: true
 SpacesInSquareBrackets: false
 Standard: Cpp11
-TemplateDepth: 256
