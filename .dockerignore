@@ -1,0 +1,63 @@
+# .dockerignore - Exclude files from Docker build context
+
+# Git
+.git
+.gitignore
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.exe
+*.out
+build_config.mk
+ssdb-server
+tools/ssdb-*
+tools/leveldb-import
+
+# Test artifacts
+tests/test_ssdb
+tests/*.o
+test_var*
+
+# Data directories
+var/
+var_*/
+var_slave/
+*.pid
+*.log
+log.txt
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation (not needed in build)
+docs/
+*.md
+!README.md
+!ssdb.conf
+!ssdb_slave.conf
+
+# CI/CD
+.github/
+
+# Dependency sources (vendored, but large)
+deps/*/.git
+deps/*/build
+deps/*/out
+deps/*/*.a
+deps/*/*.so
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Temporary files
+tmp/
+*.tmp
+*.temp
