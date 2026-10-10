@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  ssdb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ssdb
+    ports:
+      - "8888:8888"
+    volumes:
+      - ssdb_data:/var/lib/ssdb
+      - ./ssdb.conf:/etc/ssdb.conf:ro
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "ssdb-cli", "-p", "8888", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - ssdb_network
+
+  ssdb-slave:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ssdb-slave
+    ports:
+      - "8889:8888"
+    volumes:
+      - ssdb_slave_data:/var/lib/ssdb
+      - ./ssdb_slave.conf:/etc/ssdb.conf:ro
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    depends_on:
+      - ssdb
+    networks:
+      - ssdb_network
+
+volumes:
+  ssdb_data:
+    driver: local
+  ssdb_slave_data:
+    driver: local
+
+networks:
+  ssdb_network:
+    driver: bridge

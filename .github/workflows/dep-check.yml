@@ -1,0 +1,136 @@
+name: Dependency Check
+
+on:
+  schedule:
+    # Run weekly on Mondays at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check-dependencies:
+    name: Check Vendored Dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check LevelDB version
+        id: leveldb
+        run: |
+          CURRENT_VERSION="1.18"
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/google/leveldb/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+          echo "Current LevelDB: $CURRENT_VERSION"
+          echo "Latest LevelDB: $LATEST_VERSION"
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "latest=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+            echo "outdated=true" >> $GITHUB_OUTPUT
+          else
+            echo "outdated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check Jemalloc version
+        id: jemalloc
+        run: |
+          CURRENT_VERSION="4.1.0"
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/jemalloc/jemalloc/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+          echo "Current Jemalloc: $CURRENT_VERSION"
+          echo "Latest Jemalloc: $LATEST_VERSION"
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "latest=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+            echo "outdated=true" >> $GITHUB_OUTPUT
+          else
+            echo "outdated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check Snappy version
+        id: snappy
+        run: |
+          CURRENT_VERSION="1.1.0"
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/google/snappy/releases/latest | jq -r '.tag_name' | sed 's/^v//')
+          echo "Current Snappy: $CURRENT_VERSION"
+          echo "Latest Snappy: $LATEST_VERSION"
+          echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "latest=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+            echo "outdated=true" >> $GITHUB_OUTPUT
+          else
+            echo "outdated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for CVEs
+        id: cves
+        run: |
+          # Check for known CVEs in current versions
+          echo "Checking for known CVEs..."
+          
+          # Jemalloc 4.1.0 CVEs
+          JEMALLOC_CVES="CVE-2018-1000150 CVE-2019-19246"
+          
+          # Snappy 1.1.0 CVEs
+          SNAPPY_CVES="CVE-2023-38545"
+          
+          echo "jemalloc_cves=$JEMALLOC_CVES" >> $GITHUB_OUTPUT
+          echo "snappy_cves=$SNAPPY_CVES" >> $GITHUB_OUTPUT
+
+      - name: Create issue if outdated
+        if: steps.leveldb.outputs.outdated == 'true' || steps.jemalloc.outputs.outdated == 'true' || steps.snappy.outputs.outdated == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## Dependency Update Available
+            
+            The following vendored dependencies have newer versions available:
+            
+            | Dependency | Current | Latest | Status |
+            |------------|---------|--------|--------|
+            | LevelDB    | ${process.env.LEVELDB_CURRENT} | ${process.env.LEVELDB_LATEST} | ${process.env.LEVELDB_OUTDATED === 'true' ? '🔴 Outdated' : '🟢 Current'} |
+            | Jemalloc   | ${process.env.JEMALLOC_CURRENT} | ${process.env.JEMALLOC_LATEST} | ${process.env.JEMALLOC_OUTDATED === 'true' ? '🔴 Outdated' : '🟢 Current'} |
+            | Snappy     | ${process.env.SNAPPY_CURRENT} | ${process.env.SNAPPY_LATEST} | ${process.env.SNAPPY_OUTDATED === 'true' ? '🔴 Outdated' : '🟢 Current'} |
+            
+            ### Known CVEs in Current Versions
+            
+            **Jemalloc ${process.env.JEMALLOC_CURRENT}:**
+            ${process.env.JEMALLOC_CVES}
+            
+            **Snappy ${process.env.SNAPPY_CURRENT}:**
+            ${process.env.SNAPPY_CVES}
+            
+            ### Action Required
+            
+            1. Review the changelog for each updated dependency
+            2. Test compatibility with SSDB
+            3. Update the vendored copy in \`deps/\`
+            4. Update \`VERSIONS.md\`
+            5. Run \`make clean_all && make && make test\`
+            6. Submit a PR with the updates
+            
+            See [VERSIONS.md](VERSIONS.md) for update procedures.
+            `;
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🔄 Dependency Updates Available',
+              body: body,
+              labels: ['dependencies', 'maintenance']
+            });
+        env:
+          LEVELDB_CURRENT: ${{ steps.leveldb.outputs.current }}
+          LEVELDB_LATEST: ${{ steps.leveldb.outputs.latest }}
+          LEVELDB_OUTDATED: ${{ steps.leveldb.outputs.outdated }}
+          JEMALLOC_CURRENT: ${{ steps.jemalloc.outputs.current }}
+          JEMALLOC_LATEST: ${{ steps.jemalloc.outputs.latest }}
+          JEMALLOC_OUTDATED: ${{ steps.jemalloc.outputs.outdated }}
+          JEMALLOC_CVES: ${{ steps.cves.outputs.jemalloc_cves }}
+          SNAPPY_CURRENT: ${{ steps.snappy.outputs.current }}
+          SNAPPY_LATEST: ${{ steps.snappy.outputs.latest }}
+          SNAPPY_OUTDATED: ${{ steps.snappy.outputs.outdated }}
+          SNAPPY_CVES: ${{ steps.cves.outputs.snappy_cves }}

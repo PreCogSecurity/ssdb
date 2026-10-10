@@ -57,6 +57,22 @@ clean:
 	cd src; ${MAKE} clean
 	cd tools; ${MAKE} clean
 
+test:
+	cd tests; ${MAKE} test
+
+clean:
+	rm -f *.exe.stackdump
+	rm -rf api/cpy/_cpy_
+	rm -f api/python/SSDB.pyc
+	rm -rf db_test
+	cd deps/cpy; ${MAKE} clean
+	cd src/util; ${MAKE} clean
+	cd src/ssdb; ${MAKE} clean
+	cd src/net; ${MAKE} clean
+	cd src; ${MAKE} clean
+	cd tools; ${MAKE} clean
+	cd tests; ${MAKE} clean
+
 clean_all: clean
 	cd "${LEVELDB_PATH}"; ${MAKE} clean
 	rm -f ${JEMALLOC_PATH}/Makefile

@@ -28,8 +28,8 @@ fi
 
 case "$TARGET_OS" in
     Darwin)
-        #PLATFORM_CLIBS="-pthread"
-		#PLATFORM_CFLAGS=""
+        PLATFORM_CLIBS="-pthread"
+		PLATFORM_CFLAGS=""
         ;;
     Linux)
         PLATFORM_CLIBS="-pthread -lrt"
@@ -82,7 +82,7 @@ cd "$DIR"
 
 
 case "$TARGET_OS" in
-	CYGWIN*|FreeBSD|OS_ANDROID_CROSSCOMPILE)
+	CYGWIN*|FreeBSD|OS_ANDROID_CROSSCOMPILE|Darwin)
 		echo "not using jemalloc on $TARGET_OS"
 	;;
 	*)
@@ -109,7 +109,7 @@ echo "#define SSDB_VERSION \"`cat version`\"" >> src/version.h
 echo "#endif" >> src/version.h
 echo "#endif" >> src/version.h
 case "$TARGET_OS" in
-	CYGWIN*|FreeBSD)
+	CYGWIN*|FreeBSD|Darwin)
 	;;
 	OS_ANDROID_CROSSCOMPILE)
         echo "#define OS_ANDROID 1" >> src/version.h
@@ -140,7 +140,7 @@ echo "CLIBS += \"$LEVELDB_PATH/libleveldb.a\"" >> build_config.mk
 echo "CLIBS += \"$SNAPPY_PATH/.libs/libsnappy.a\"" >> build_config.mk
 
 case "$TARGET_OS" in
-	CYGWIN*|FreeBSD|OS_ANDROID_CROSSCOMPILE)
+	CYGWIN*|FreeBSD|OS_ANDROID_CROSSCOMPILE|Darwin)
 	;;
 	*)
 		echo "CLIBS += \"$JEMALLOC_PATH/lib/libjemalloc.a\"" >> build_config.mk

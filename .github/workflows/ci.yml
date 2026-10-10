@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-test:
+    name: Build and Test (Ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CC: gcc-11
+      CXX: g++-11
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-11 g++-11 \
+            make autoconf automake libtool \
+            clang-format-14 clang-tidy-14 \
+            cmake
+
+      - name: Configure build
+        run: |
+          ./build.sh
+
+      - name: Build project
+        run: |
+          make -j$(nproc)
+
+      - name: Run clang-format check
+        run: |
+          find src -name "*.cpp" -o -name "*.h" | xargs clang-format-14 --dry-run --Werror
+
+      - name: Run clang-tidy check
+        run: |
+          find src -name "*.cpp" | xargs clang-tidy-14 -p=. --checks='bugprone-*,performance-*,modernize-*,readability-*' --warnings-as-errors='*' --header-filter='src/.*' 2>&1 | head -100
+
+      - name: Run unit tests
+        run: |
+          make test
+        continue-on-error: false
+
+      - name: Verify binaries exist
+        run: |
+          test -f ssdb-server
+          test -f tools/ssdb-cli
+          test -f tools/ssdb-bench
+          test -f tools/ssdb-dump
+          test -f tools/ssdb-repair
+
+  build-macos:
+    name: Build (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      CC: clang
+      CXX: clang++
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew install autoconf automake libtool
+
+      - name: Configure build
+        run: |
+          ./build.sh
+
+      - name: Build project
+        run: |
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Verify binaries exist
+        run: |
+          test -f ssdb-server
+          test -f tools/ssdb-cli
+
+  lint:
+    name: Lint (clang-format, clang-tidy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install clang tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format-14 clang-tidy-14
+
+      - name: Check formatting
+        run: |
+          find src -name "*.cpp" -o -name "*.h" | xargs clang-format-14 --dry-run --Werror
+
+      - name: Run clang-tidy
+        run: |
+          find src -name "*.cpp" | xargs clang-tidy-14 -p=. --checks='bugprone-*,performance-*,modernize-*,readability-*' --warnings-as-errors='*' --header-filter='src/.*' 2>&1 | head -100

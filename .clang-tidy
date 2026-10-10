@@ -1,0 +1,32 @@
+---
+# SSDB clang-tidy configuration
+# Focus on bugprone, performance, modernize, and readability checks
+
+Checks: >
+  bugprone-*,
+  performance-*,
+  modernize-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nullptr,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -readability-function-cognitive-complexity,
+  -bugprone-easily-swappable-parameters,
+  -performance-unnecessary-value-param
+
+WarningsAsErrors: '*'
+
+HeaderFilterRegex: 'src/.*'
+
+CheckOptions:
+  - key: readability-identifier-length.MinimumVariableNameLength
+    value: '1'
+  - key: readability-identifier-length.MinimumFunctionNameLength
+    value: '1'
+  - key: readability-magic-numbers.IgnoredIntegerValues
+    value: '0;1;2;3;4;5;6;7;8;9;10;100;1000;1024;8888'
+  - key: modernize-use-nullptr.NullMacros
+    value: 'NULL'
+  - key: bugprone-easily-swappable-parameters.SwapThreshold
+    value: '3'
